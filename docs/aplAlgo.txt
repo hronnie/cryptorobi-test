@@ -1,0 +1,81 @@
+bottomPrice = user defined  // bottom of the channel
+topPrice = user defined     // top of the channel
+coinFrom = user defined  // coin from
+coinTo = user defined    // coin to
+toleranceLimit = user defined    // the algorithm doesn't need to go to the top or bottom. in %
+buy = true   // the actual state for buy/sell - if buy = true it means that it will looking to buy dips
+sell = false   // the actual state for buy/sell - if sell = true it means that it will looking to sell dips
+amountFromCoin = user defined  // the amount to buy at first in from Coin
+amountToCoin - variable   // the amount to sell in To coin
+reinvest = true   // if this is true then amountFromCoin will be overwritten with the profit + original amount
+buyOrderId - variable    // the latest buy order id. it is for checking status
+sellOrderId - variable   // the latest sell order id. it is for checking status
+actPrice - variable // actual price for coinFrom/coinTo
+checkTime = 1000   // loop time for the main loop in ms
+stopLossRatio = 1   // how much percent for the stop loss
+
+
+LOOP MAIN1 while true
+
+    sleep(checkTime)
+
+    IF (buy)
+        IF (buyOrderId)
+            order = get order by buyOrderId
+            IF (order.pending)
+                CONTINUE
+            END IF
+            ELSE
+                buy = false
+                sell = true
+                buyOrderId = NULL
+            END ELSE
+        END IF
+        ELSE
+            [buyOrderId, orderDetails, amountToCoin] = buy(bottomPrice, actPrice, toleranceLimit, coinFrom, coinTo, amountFromCoin)
+        END ELSE
+    END IF
+
+    IF (sell)
+        IF (sellOrderId)
+            order = get order by sellOrderId
+            IF (order.pending)
+                CONTINUE
+            END IF
+            ELSE
+                buy = true
+                sell = false
+                sellOrderId = NULL
+            END ELSE
+        END IF
+        ELSE
+            [sellOrderId, orderDetails, newAmountFromCoin, amountFromCoin] = sell(coinFrom, coinTo, amountToCoin, reinvest)
+        END ELSE
+    END IF
+
+END LOOP MAIN1
+
+
+FUNCTION buy(bottomPrice, actPrice, toleranceLimit, coinFrom, coinTo, amountFromCoin)
+
+        IF (bottomPrice <= actPrice < bottomPrice + toleranceLimit)
+            [buyOrderId, orderDetails, amountToCoin] = buyLIMIT(coinFrom, coinTo, amountFromCoin)
+            logToDB(orderDetails)
+            RETURN [buyOrderId, orderDetails, amountToCoin]
+        END
+        ELSE
+            return NULL
+        END
+
+END FUNCTION
+
+FUNCTION sell(coinFrom, coinTo, amountToCoin, reinvest)
+
+        [sellOrderId, orderDetails, newAmountFromCoin] = sellOCO(coinFrom, coinTo, amountToCoin)
+        IF (reinvest)
+            amountFromCoin = newAmountFromCoin
+        END
+        logToDB(orderDetails)
+        RETURN [sellOrderId, orderDetails, newAmountFromCoin, amountFromCoin]
+
+END FUNCTION
