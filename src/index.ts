@@ -14,10 +14,15 @@ async function run() {
     let buyOrderId: string = '';
     let sellOrderId = null;
     let actPrice = 0;
-    const checkTime = 20000;
+    const checkTime = 2000;
 
-    AsyncPolling(async function (end: any) {
+    AsyncPolling(async (end: any) => {
         const inputData: ChannelInputModel = await getChannelData();
+        if (inputData.appStatus === 'STOP') {
+            console.log('Application was stopped from outside');
+            return;
+        }
+
         const symbol = `${inputData.coinTo}${inputData.coinFrom}`;
         const actPriceResponse = await getFutureMarkPrice(symbol);
         const actPrice = actPriceResponse?.data?.markPrice;
@@ -27,11 +32,9 @@ async function run() {
         if (buy) {
             console.log('buyOrderId', buyOrderId);
             if (buyOrderId !== '') {
-                const actBuyOrder:any = checkOrderStatus(symbol, buyOrderId);
+                const actBuyOrder:any = await checkOrderStatus(symbol, buyOrderId);
                 console.log('actBuyOrder', actBuyOrder);
-                if (actBuyOrder.status !== 'FILLED') {
-                    return;
-                } else {
+                if (actBuyOrder.status === 'FILLED') {
                     buy = false;
                     sell = true;
                     buyOrderId = '';
@@ -43,8 +46,6 @@ async function run() {
             }
         }
         console.log(actPrice);
-
-
         end();
     }, checkTime).run();
 

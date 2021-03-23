@@ -7,4 +7,5 @@ export class ChannelInputModel {
     stopLossRatio: number;
     toleranceLimit: number;
     topPrice: number;
+    appStatus: string;
 }

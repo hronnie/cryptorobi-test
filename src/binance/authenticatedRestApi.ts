@@ -26,7 +26,6 @@ export async function buyFutureLimit(symbol: string,
 
 export async function checkOrderStatus(symbol: string,
                                        orderId: string) {
-    // return await client.getOrder(symbol, orderId);
-
+    return await binanceNodeClient.futuresOrderStatus(symbol,  {orderId });
 }
 
