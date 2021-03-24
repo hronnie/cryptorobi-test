@@ -1,4 +1,5 @@
 import * as firebaseAdmin from 'firebase-admin';
+import {FuturesOrderModel} from "../model/futuresOrder.model";
 
 const serviceAccount = require('./morecoin-ui-firebase-adminsdk-ienh4-6c03ea4b06.json');
 
@@ -18,5 +19,10 @@ export async function getChannelData() {
         }).catch(function(error) {
             console.log(error);
     })
+}
 
+export async function logFutureOrderData(order: FuturesOrderModel) {
+    const futuresOrders = db.ref('futureOrders')
+    const usersRef = futuresOrders.child(order.orderId.toString());
+    await usersRef.set(order);
 }
