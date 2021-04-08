@@ -51,4 +51,11 @@ export class FuturesOrderModel {
         return timeItem;
     }
 
+    toOrderString() {
+        return `Order details: orderId = ${this.orderId},
+         symbol = ${this.symbol}, status = ${this.status}, price = ${this.price}, 
+         avgPrice = ${this.avgPrice}, origQty = ${this.origQty}, type = ${this.type},
+         side = ${this.side}, positionSide = ${this.positionSide}, stopPrice = ${this.stopPrice}`;
+    };
+
 }

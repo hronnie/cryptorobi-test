@@ -34,6 +34,7 @@ async function run() {
         const inputData: ChannelInputModel = await getChannelData();
         if (inputData.appStatus === 'STOP') {
             console.log('Application was stopped from outside');
+            sendEmail('Application was stopped from outside');
             return;
         }
 
@@ -46,7 +47,6 @@ async function run() {
         // ******************************************
         // *********** BUY SIDE *********************
         // ******************************************
-        console.log('buy', buy);
         if (buy) {
             console.log('buyOrderId', buyOrderId);
             if (buyOrderId === '') {
@@ -61,6 +61,7 @@ async function run() {
                 const actBuyOrder: FuturesOrderModel = new FuturesOrderModel(actBuyOrderRaw);
                 console.log('actBuyOrder', actBuyOrder);
                 if (actBuyOrder.status === 'FILLED') {
+                    sendEmail('Vettem: ' + actBuyOrder.toOrderString());
                     logFutureOrderData(actBuyOrder);
 
 
@@ -80,6 +81,7 @@ async function run() {
 
                     logFutureOrderData(stopOrder);
                     logFutureOrderData(takeOrder);
+                    sendEmail("stop order: " + stopOrder.toOrderString() + "######### take order: " + takeOrder.toOrderString());
 
                     console.log('stopOrder', stopOrder);
                     console.log('takeOrder', takeOrder);
@@ -90,9 +92,9 @@ async function run() {
                     sell = true;
                 } else if (actBuyOrder.status === 'EXPIRED') {
                     logFutureOrderData(actBuyOrder);
+                    sendEmail('Application was stopped due to lower price to bottom price');
                     console.log('Application was stopped due to lower price to bottom price');
                     return; // EXIT
-                    // send email
                 }
             }
         }
@@ -111,38 +113,20 @@ async function run() {
             if (actTPSellOrder.status === 'FILLED') {
                 console.log('actTPSellOrder', actTPSellOrder);
                 cancelFuturesOrderIfActive(symbol, sellSLOrderId);
-                // send email
+                sendEmail('Take profit executed: ' + actTPSellOrder.toOrderString())
                 buy = true;
                 sell = false;
             }
             if (actSLSellOrder.status === 'FILLED') {
                 console.log('actTPSellOrder', actTPSellOrder);
                 cancelFuturesOrderIfActive(symbol, sellTpOrderId);
-                // send email
+                sendEmail('Stop loss executed, Exited: ' + actTPSellOrder.toOrderString());
                 return; // EXIT
             }
         }
 
         console.log('Current price: ', actPrice);
         end();
-
-
-        // IF (sell)
-        // IF (sellOrderId)
-        // order = get order by sellOrderId
-        // IF (order.pending)
-        // CONTINUE
-        // END IF
-        // ELSE
-        // buy = true
-        // sell = false
-        // sellOrderId = NULL
-        // END ELSE
-        // END IF
-        // ELSE
-        //     [sellOrderId, orderDetails, newAmountFromCoin, amountFromCoin] = sell(coinFrom, coinTo, amountToCoin, reinvest)
-        // END ELSE
-        // END IF
     }, checkTime).run();
 
 
