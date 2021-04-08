@@ -9,5 +9,8 @@ export const FUTURES_PRICE_PRECISION_MAPPING = new Map();
 FUTURES_PRICE_PRECISION_MAPPING.set('BTCUSDT',     {
     pricePrecision: 2,
     quantityPrecision: 3
-})
+});
+
+export const STOP_LIMIT_SHIFT = new Map();
+STOP_LIMIT_SHIFT.set('BTCUSDT', 30);
 

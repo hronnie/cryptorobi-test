@@ -1,5 +1,5 @@
 import {FUTURES_PRICE_PRECISION_MAPPING, ORDER_TYPE_LIMIT} from "../core/constants";
-import {toFixed} from "../core/utility";
+import {getFutureCoinPrice, getFutureCoinQuantity, toFixed} from "../core/utility";
 
 require('dotenv').config();
 
@@ -16,16 +16,58 @@ const binanceNodeClient = new NodeBinanceApi().options({
 });
 
 export async function buyFutureLimit(symbol: string,
-                                amount: number,
+                                usdtAmount: number,
                                 limitPrice: number
                          ) {
-    const precisionModel = FUTURES_PRICE_PRECISION_MAPPING.get(symbol);
-    const quantity = amount / limitPrice;
-    return await binanceNodeClient.futuresBuy(symbol, toFixed(quantity, precisionModel.quantityPrecision), toFixed(limitPrice, precisionModel.pricePrecision) );
+    return await binanceNodeClient.futuresBuy(symbol, getFutureCoinQuantity(symbol, limitPrice, usdtAmount),  getFutureCoinPrice(symbol, limitPrice));
+}
+
+export async function sellFuturesTakeProfitLimit(symbol: string,
+                                                 positionAmt: string,
+                                                 price: number,
+                                                 stopPrice: number) {
+    return await binanceNodeClient.futuresOrder('SELL',
+                                                    symbol,
+                                                    positionAmt,
+                                                    false,
+                                                    {
+                                                        type: 'TAKE_PROFIT',
+                                                        stopPrice: getFutureCoinPrice(symbol, stopPrice),
+                                                        price: getFutureCoinPrice(symbol, price),
+                                                        quantity: positionAmt
+                                                    });
+}
+
+export async function sellFuturesStopLossLimit(symbol: string,
+                                                 positionAmt: string,
+                                                 price: number,
+                                                 stopPrice: number) {
+    return await binanceNodeClient.futuresOrder( 'SELL',
+                                                    symbol,
+                                                    positionAmt,
+                                                    false,
+                                                    {
+                                                        type: 'STOP',
+                                                        stopPrice: getFutureCoinPrice(symbol, stopPrice),
+                                                        price: getFutureCoinPrice(symbol, price),
+                                                        quantity: positionAmt
+                                                    } );
+}
+
+export async function cancelFuturesOrder(symbol: string, orderId: string) {
+    return await binanceNodeClient.futuresCancel(symbol, {orderId: orderId});
 }
 
 export async function checkOrderStatus(symbol: string,
                                        orderId: string) {
     return await binanceNodeClient.futuresOrderStatus(symbol,  {orderId });
 }
+
+export async function getFuturePosition() {
+    return await binanceNodeClient.futuresPositionRisk();
+}
+
+
+
+
 
