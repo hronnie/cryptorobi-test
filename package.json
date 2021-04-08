@@ -54,6 +54,7 @@
     "firebase-admin": "^9.5.0",
     "jest": "^26.5.3",
     "node-binance-api": "^0.12.5",
+    "nodemailer": "^6.5.0",
     "ts-jest": "^26.4.1"
   }
 }

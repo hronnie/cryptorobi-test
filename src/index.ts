@@ -10,16 +10,14 @@ import {
 import {FuturesOrderModel} from "./model/futuresOrder.model";
 import {cancelFuturesOrderIfActive, extractMarketFromPosition} from "./core/utility";
 import {STOP_LIMIT_SHIFT} from "./core/constants";
+import {sendEmail} from "./service/emailSend";
 
 const { default: Binance } = require("binance-api-node");
 const AsyncPolling = require('async-polling');
 
 async function test() {
-    const bottomPrice = 50000;
-    const stopLossRatio = 1;
-    const stopLossNumPrice: number = bottomPrice - (Math.ceil(bottomPrice * (stopLossRatio / 100)));
-    console.log('stopLossNumPrice', stopLossNumPrice);
-    console.log('stopLossNumPrice + SHIFT', stopLossNumPrice + STOP_LIMIT_SHIFT.get('BTCUSDT'));
+    sendEmail("this is a test email");
+    console.log('email was sent hopefully');
 }
 
 
