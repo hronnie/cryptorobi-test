@@ -1,5 +1,5 @@
-import {getChannelData, logFutureOrderData} from "./dao/realTimeDbDAO";
-import {getFutureMarkPrice, getFuturesCoinExchangeInfo} from "./binance/publicRestApi";
+import {getChannelData} from "./dao/realTimeDbDAO";
+import {getFutureMarkPrice} from "./binance/publicRestApi";
 import {ChannelInputModel} from "./model/channelInput.model";
 import {
     buyFutureLimit,
@@ -18,6 +18,7 @@ const AsyncPolling = require('async-polling');
 
 async function run() {
 
+    console.log('################## Welcome to Crypto Robi ##################');
     sendEmail('################## Welcome to Crypto Robi ##################');
 
     let buy = true;
@@ -33,15 +34,9 @@ async function run() {
 
         // ##### Checking app status ######
         if (inputData.appStatus === 'STOP') {
-            sendEmail('Application was stopped from outside');
-            return;
+            await sendEmail('Application was stopped from outside');
+            process.exit();
         }
-
-        if (inputData.appStatus === 'PAUSE') {
-            console.log('paused....')
-            end();
-        }
-
         // END ##### Checking app status ######
 
         const symbol = `${inputData.coinTo}${inputData.coinFrom}`;
@@ -86,8 +81,8 @@ async function run() {
                     const takeOrder: FuturesOrderModel = new FuturesOrderModel(takeOrderRaw);
 
                     if (stopOrder.orderId === 0 || takeOrder.orderId === 0) {  // sell order wasn't accepted for some reason ==> EXIT
-                        sendEmail('Application was stopped due to wrong limit settings');
-                        return;
+                        await sendEmail('Application was stopped due to wrong limit settings');
+                        process.exit();
                     }
 
                     sendEmail("stop order: " + stopOrder.toOrderString() + "######### take order: " + takeOrder.toOrderString());
@@ -100,8 +95,9 @@ async function run() {
                     buy = false;
                     sell = true;
                 } else if (actBuyOrder.status === 'EXPIRED') {
-                    sendEmail('Application was stopped due to lower price to bottom price');
-                    return; // EXIT
+                    console.log('Application was stopped due to lower price to bottom price')
+                    await sendEmail('Application was stopped due to lower price to bottom price');
+                    process.exit(); // EXIT
                 }
             }
         }
@@ -125,15 +121,13 @@ async function run() {
             }
             if (actSLSellOrder.status === 'FILLED') {   // Stop loss was filled ==> EXIT
                 cancelFuturesOrderIfActive(symbol, sellTpOrderId);
-                sendEmail('Stop loss executed, Exited: ' + actTPSellOrder.toOrderString());
-                return; // EXIT
+                await sendEmail('Stop loss executed, Exited: ' + actTPSellOrder.toOrderString());
+                process.exit(); // EXIT
             }
         }
 
         end();
     }, checkTime).run();
-
-
 
 }
 
