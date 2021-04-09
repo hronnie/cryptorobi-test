@@ -15,12 +15,6 @@ import {sendEmail} from "./service/emailSend";
 const { default: Binance } = require("binance-api-node");
 const AsyncPolling = require('async-polling');
 
-async function test() {
-    const stopLossNumPrice: number = 57946 - (Math.ceil(57946 * (0.2 / 100)));
-    console.log(stopLossNumPrice)
-
-}
-
 
 async function run() {
 
@@ -34,15 +28,28 @@ async function run() {
     const checkTime = 2000;
 
     AsyncPolling(async (end: any) => {
+        // Get main configuration
         const inputData: ChannelInputModel = await getChannelData();
+
+        // ##### Checking app status ######
         if (inputData.appStatus === 'STOP') {
             sendEmail('Application was stopped from outside');
             return;
         }
 
+        if (inputData.appStatus === 'PAUSE') {
+            console.log('paused....')
+            end();
+        }
+
+        // END ##### Checking app status ######
+
         const symbol = `${inputData.coinTo}${inputData.coinFrom}`;
+
+        // Getting actual price
         const actPriceResponse = await getFutureMarkPrice(symbol);
         const actPrice = actPriceResponse?.data?.markPrice;
+
         console.log('actPrice - starting cycle', actPrice);
 
 
@@ -50,23 +57,26 @@ async function run() {
         // *********** BUY SIDE *********************
         // ******************************************
         if (buy) {
-            console.log('buyOrderId', buyOrderId);
-            if (buyOrderId === '') {
+
+            if (buyOrderId === '') {  // If there is no buy order yet
                 const buyOrderRaw: FuturesOrderModel =
                     await buyFutureLimit(symbol, inputData.amountFromCoin, inputData.bottomPrice);
                 const buyOrderResult: FuturesOrderModel = new FuturesOrderModel(buyOrderRaw);
                 buyOrderId = buyOrderResult.orderId.toString();
-            } else {
+                console.log('#### Buy order has been created. buyOrderId = ', buyOrderResult);
+            } else {  // If there is already a buy order - polling the status
                 const actBuyOrderRaw: any = await checkOrderStatus(symbol, buyOrderId);
                 const actBuyOrder: FuturesOrderModel = new FuturesOrderModel(actBuyOrderRaw);
-                if (actBuyOrder.status === 'FILLED') {
-                    console.log('actBuyOrder', actBuyOrder);
+                if (actBuyOrder.status === 'FILLED') {  // Buy order is filled: reset values and set Sell orders (TP and SL)
+                    console.log('Buy order has been filled. actBuyOrder = ', actBuyOrder);
+                    buyOrderId = '';
                     sendEmail('Vettem: ' + actBuyOrder.toOrderString());
 
                     // Buy order is filled, let's set take profit and stop loss orders:
                     const positions = await getFuturePosition();
                     const currentPosition =  extractMarketFromPosition(symbol, positions);
 
+                    // Stop loss price = bottom price - stop loss percentage
                     const stopLossNumPrice: number = inputData.bottomPrice - (Math.ceil(inputData.bottomPrice * (inputData.stopLossRatio / 100)));
 
                     const takeOrderRaw = await sellFuturesTakeProfitLimit(symbol, currentPosition.positionAmt, inputData.topPrice + STOP_LIMIT_SHIFT.get(symbol), inputData.topPrice);
@@ -74,17 +84,19 @@ async function run() {
                     const stopOrderRaw = await sellFuturesStopLossLimit(symbol, currentPosition.positionAmt, stopLossNumPrice, stopLossNumPrice + STOP_LIMIT_SHIFT.get(symbol));
                     const stopOrder: FuturesOrderModel = new FuturesOrderModel(stopOrderRaw);
                     const takeOrder: FuturesOrderModel = new FuturesOrderModel(takeOrderRaw);
-                    if (stopOrder.orderId === 0 || takeOrder.orderId === 0) {
+
+                    if (stopOrder.orderId === 0 || takeOrder.orderId === 0) {  // sell order wasn't accepted for some reason ==> EXIT
                         sendEmail('Application was stopped due to wrong limit settings');
                         return;
                     }
-                    sellSLOrderId = stopOrder.orderId.toString();
-                    sellTpOrderId = takeOrder.orderId.toString();
 
                     sendEmail("stop order: " + stopOrder.toOrderString() + "######### take order: " + takeOrder.toOrderString());
+                    console.log('Stop order: ', stopOrder);
+                    console.log('Take order: ', takeOrder);
 
-                    // end
-
+                    // Sets value for SELL side toggle
+                    sellSLOrderId = stopOrder.orderId.toString();
+                    sellTpOrderId = takeOrder.orderId.toString();
                     buy = false;
                     sell = true;
                 } else if (actBuyOrder.status === 'EXPIRED') {
@@ -99,18 +111,19 @@ async function run() {
         // ******************************************
 
         if (sell) {
+            // Get actual take profit and stop loss sell orders:
             const actTPSellOrderRaw: any = await checkOrderStatus(symbol, sellTpOrderId);
             const actTPSellOrder: FuturesOrderModel = new FuturesOrderModel(actTPSellOrderRaw);
             const actSLSellOrderRaw: any = await checkOrderStatus(symbol, sellSLOrderId);
             const actSLSellOrder: FuturesOrderModel = new FuturesOrderModel(actSLSellOrderRaw);
 
-            if (actTPSellOrder.status === 'FILLED') {
+            if (actTPSellOrder.status === 'FILLED') {  // Take Profit was filled
                 cancelFuturesOrderIfActive(symbol, sellSLOrderId);
                 sendEmail('Take profit executed: ' + actTPSellOrder.toOrderString())
                 buy = true;
                 sell = false;
             }
-            if (actSLSellOrder.status === 'FILLED') {
+            if (actSLSellOrder.status === 'FILLED') {   // Stop loss was filled ==> EXIT
                 cancelFuturesOrderIfActive(symbol, sellTpOrderId);
                 sendEmail('Stop loss executed, Exited: ' + actTPSellOrder.toOrderString());
                 return; // EXIT
@@ -125,4 +138,3 @@ async function run() {
 }
 
 run();
-// test();
