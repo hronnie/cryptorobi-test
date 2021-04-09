@@ -74,8 +74,7 @@ async function run() {
                     // Stop loss price = bottom price - stop loss percentage
                     const stopLossNumPrice: number = inputData.bottomPrice - (Math.ceil(inputData.bottomPrice * (inputData.stopLossRatio / 100)));
 
-                    const takeOrderRaw = await sellFuturesTakeProfitLimit(symbol, currentPosition.positionAmt, inputData.topPrice + STOP_LIMIT_SHIFT.get(symbol), inputData.topPrice);
-
+                    const takeOrderRaw = await sellFuturesTakeProfitLimit(symbol, currentPosition.positionAmt, inputData.topPrice, inputData.topPrice + STOP_LIMIT_SHIFT.get(symbol));
                     const stopOrderRaw = await sellFuturesStopLossLimit(symbol, currentPosition.positionAmt, stopLossNumPrice, stopLossNumPrice + STOP_LIMIT_SHIFT.get(symbol));
                     const stopOrder: FuturesOrderModel = new FuturesOrderModel(stopOrderRaw);
                     const takeOrder: FuturesOrderModel = new FuturesOrderModel(takeOrderRaw);

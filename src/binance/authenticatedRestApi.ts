@@ -1,5 +1,5 @@
-import {FUTURES_PRICE_PRECISION_MAPPING, ORDER_TYPE_LIMIT} from "../core/constants";
 import {getFutureCoinPrice, getFutureCoinQuantity, toFixed} from "../core/utility";
+import {ORDER_TYPE_STOP_LOSS_LIMIT, ORDER_TYPE_TAKE_PROFIT_LIMIT} from "../core/constants";
 
 require('dotenv').config();
 
@@ -31,7 +31,7 @@ export async function sellFuturesTakeProfitLimit(symbol: string,
                                                     positionAmt,
                                                     false,
                                                     {
-                                                        type: 'TAKE_PROFIT',
+                                                        type: ORDER_TYPE_TAKE_PROFIT_LIMIT,
                                                         stopPrice: getFutureCoinPrice(symbol, stopPrice),
                                                         price: getFutureCoinPrice(symbol, price),
                                                         quantity: positionAmt
@@ -47,7 +47,7 @@ export async function sellFuturesStopLossLimit(symbol: string,
                                                     positionAmt,
                                                     false,
                                                     {
-                                                        type: 'STOP',
+                                                        type: ORDER_TYPE_STOP_LOSS_LIMIT,
                                                         stopPrice: getFutureCoinPrice(symbol, stopPrice),
                                                         price: getFutureCoinPrice(symbol, price),
                                                         quantity: positionAmt
