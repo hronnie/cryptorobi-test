@@ -45,7 +45,6 @@ async function run() {
         const actPriceResponse = await getFutureMarkPrice(symbol);
         const actPrice = actPriceResponse?.data?.markPrice;
 
-        console.log('actPrice - starting cycle', actPrice);
 
 
         // ******************************************

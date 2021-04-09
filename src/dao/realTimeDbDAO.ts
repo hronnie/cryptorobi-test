@@ -1,10 +1,13 @@
 import * as firebaseAdmin from 'firebase-admin';
 import {FuturesOrderModel} from "../model/futuresOrder.model";
-
-const serviceAccount = require('./morecoin-ui-firebase-adminsdk-ienh4-6c03ea4b06.json');
+import {firebaseSecret} from "./firebase-settings";
 
 firebaseAdmin.initializeApp({
-    credential: firebaseAdmin.credential.cert(serviceAccount),
+    credential: firebaseAdmin.credential.cert({
+        projectId: firebaseSecret.project_id,
+        clientEmail: firebaseSecret.client_email,
+        privateKey: firebaseSecret.private_key
+    }),
     databaseURL: 'https://morecoin-ui-default-rtdb.europe-west1.firebasedatabase.app/'
 });
 

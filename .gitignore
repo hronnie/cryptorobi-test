@@ -1,12 +1,13 @@
 dist
 build
+build/index.js
 node_modules
 bower_components
 .DS_Store
 .bowerrc
 npm-debug.log
 .env
-src/dao/morecoin-ui-firebase-adminsdk-ienh4-6c03ea4b06.json
+src/dao/firebase-settings.ts
 
 ### IntelliJ IDEA ###
 .idea
