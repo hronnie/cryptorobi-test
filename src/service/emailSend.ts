@@ -20,8 +20,6 @@ const mailTransport = nodemailer.createTransport(
 )
 
 export function sendEmail(message: string) {
-    console.log('gmailAddress', gmailAddress);
-    console.log('gmailPassword', gmailPassword);
     let fullEmail: any;
     fullEmail = createMailMessage("### Crypto Robi Message ### ", message)
 

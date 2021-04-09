@@ -2,7 +2,7 @@ import {getChannelData, logFutureOrderData} from "./dao/realTimeDbDAO";
 import {getFutureMarkPrice, getFuturesCoinExchangeInfo} from "./binance/publicRestApi";
 import {ChannelInputModel} from "./model/channelInput.model";
 import {
-    buyFutureLimit, cancelFuturesOrder,
+    buyFutureLimit,
     checkOrderStatus,
     getFuturePosition, sellFuturesStopLossLimit,
     sellFuturesTakeProfitLimit
@@ -16,12 +16,15 @@ const { default: Binance } = require("binance-api-node");
 const AsyncPolling = require('async-polling');
 
 async function test() {
-    sendEmail("this is a test email");
-    console.log('email was sent hopefully');
+    const stopLossNumPrice: number = 57946 - (Math.ceil(57946 * (0.2 / 100)));
+    console.log(stopLossNumPrice)
+
 }
 
 
 async function run() {
+
+    sendEmail('################## Welcome to Crypto Robi ##################');
 
     let buy = true;
     let sell = false;
@@ -33,7 +36,6 @@ async function run() {
     AsyncPolling(async (end: any) => {
         const inputData: ChannelInputModel = await getChannelData();
         if (inputData.appStatus === 'STOP') {
-            console.log('Application was stopped from outside');
             sendEmail('Application was stopped from outside');
             return;
         }
@@ -53,47 +55,40 @@ async function run() {
                 const buyOrderRaw: FuturesOrderModel =
                     await buyFutureLimit(symbol, inputData.amountFromCoin, inputData.bottomPrice);
                 const buyOrderResult: FuturesOrderModel = new FuturesOrderModel(buyOrderRaw);
-                logFutureOrderData(buyOrderResult);
-                console.log('buyOrderResult', buyOrderResult);
                 buyOrderId = buyOrderResult.orderId.toString();
             } else {
                 const actBuyOrderRaw: any = await checkOrderStatus(symbol, buyOrderId);
                 const actBuyOrder: FuturesOrderModel = new FuturesOrderModel(actBuyOrderRaw);
-                console.log('actBuyOrder', actBuyOrder);
                 if (actBuyOrder.status === 'FILLED') {
+                    console.log('actBuyOrder', actBuyOrder);
                     sendEmail('Vettem: ' + actBuyOrder.toOrderString());
-                    logFutureOrderData(actBuyOrder);
-
 
                     // Buy order is filled, let's set take profit and stop loss orders:
                     const positions = await getFuturePosition();
                     const currentPosition =  extractMarketFromPosition(symbol, positions);
-                    console.log(currentPosition);
 
                     const stopLossNumPrice: number = inputData.bottomPrice - (Math.ceil(inputData.bottomPrice * (inputData.stopLossRatio / 100)));
 
-                    const stopOrderRaw = await sellFuturesStopLossLimit(symbol, currentPosition.positionAmt, stopLossNumPrice, stopLossNumPrice + STOP_LIMIT_SHIFT.get(symbol));
                     const takeOrderRaw = await sellFuturesTakeProfitLimit(symbol, currentPosition.positionAmt, inputData.topPrice + STOP_LIMIT_SHIFT.get(symbol), inputData.topPrice);
+
+                    const stopOrderRaw = await sellFuturesStopLossLimit(symbol, currentPosition.positionAmt, stopLossNumPrice, stopLossNumPrice + STOP_LIMIT_SHIFT.get(symbol));
                     const stopOrder: FuturesOrderModel = new FuturesOrderModel(stopOrderRaw);
                     const takeOrder: FuturesOrderModel = new FuturesOrderModel(takeOrderRaw);
+                    if (stopOrder.orderId === 0 || takeOrder.orderId === 0) {
+                        sendEmail('Application was stopped due to wrong limit settings');
+                        return;
+                    }
                     sellSLOrderId = stopOrder.orderId.toString();
                     sellTpOrderId = takeOrder.orderId.toString();
 
-                    logFutureOrderData(stopOrder);
-                    logFutureOrderData(takeOrder);
                     sendEmail("stop order: " + stopOrder.toOrderString() + "######### take order: " + takeOrder.toOrderString());
 
-                    console.log('stopOrder', stopOrder);
-                    console.log('takeOrder', takeOrder);
                     // end
-
 
                     buy = false;
                     sell = true;
                 } else if (actBuyOrder.status === 'EXPIRED') {
-                    logFutureOrderData(actBuyOrder);
                     sendEmail('Application was stopped due to lower price to bottom price');
-                    console.log('Application was stopped due to lower price to bottom price');
                     return; // EXIT
                 }
             }
@@ -109,23 +104,19 @@ async function run() {
             const actSLSellOrderRaw: any = await checkOrderStatus(symbol, sellSLOrderId);
             const actSLSellOrder: FuturesOrderModel = new FuturesOrderModel(actSLSellOrderRaw);
 
-            console.log('actSLSellOrder', actSLSellOrder);
             if (actTPSellOrder.status === 'FILLED') {
-                console.log('actTPSellOrder', actTPSellOrder);
                 cancelFuturesOrderIfActive(symbol, sellSLOrderId);
                 sendEmail('Take profit executed: ' + actTPSellOrder.toOrderString())
                 buy = true;
                 sell = false;
             }
             if (actSLSellOrder.status === 'FILLED') {
-                console.log('actTPSellOrder', actTPSellOrder);
                 cancelFuturesOrderIfActive(symbol, sellTpOrderId);
                 sendEmail('Stop loss executed, Exited: ' + actTPSellOrder.toOrderString());
                 return; // EXIT
             }
         }
 
-        console.log('Current price: ', actPrice);
         end();
     }, checkTime).run();
 
@@ -133,5 +124,5 @@ async function run() {
 
 }
 
-// run();
-test();
+run();
+// test();
